@@ -53,6 +53,9 @@ export default class Model {
             let relations = repository.getRelations(this.Table);
 
             // I will explain why I use Aigle more down
+            // This returns the data that was loaded through relations. If a constructor (model) was passed to the join function
+            // The data that is in the relations are instances of that model. We check if that is the case
+            // If yes, we can run .json() on the nested model. Recursion handles the rest
             Aigle.map(relations, relation => {
                 _tmp[relation.table] = typeof this[relation.table].json==="function" ? this[relation.table].json() : this[relation.table];
             });
@@ -73,6 +76,12 @@ export default class Model {
             if (Object.keys(relations).length > 0 && includeRelations) {
                 await Aigle.map(relations, async relation => {
                     await Aigle.map(data, async entry => {
+                        // In case you want to know/read what it's doing here
+                        // Aigle is async, so you can await and the rest ouside of the loop will wait
+                        // I check the relation. If it's x to one, it's way faster to do a get instead of a filter
+                        // After this, it will check if there was a constructor (model) passed when .join was called
+                        // If there was, it will return instances of that model given the data it loaded from the db
+                        // Very dope
                         if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne && entry[relation.left]) {
                             let subdata = await db.r.table(relation.table).get(entry[relation.left]);
                             entry[relation.table] = relation.model ? new relation.model(subdata) : subdata;
@@ -99,12 +108,7 @@ export default class Model {
 
             if (Object.keys(relations).length > 0 && includeRelations) {
                 await Aigle.map(relations, async relation => {
-/*                    if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne && data[relation.left]) {
-                        data[relation.table] = await db.r.table(relation.table).get(data[relation.left]);
-                    } else {
-                        data[relation.table] = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(data[relation.left]));
-                    }*/
-
+                    // Check all() to read about the logic that's happening here
                     if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne && data[relation.left]) {
                         let subdata = await db.r.table(relation.table).get(data[relation.left]);
                         data[relation.table] = relation.model ? new relation.model(subdata) : subdata;
