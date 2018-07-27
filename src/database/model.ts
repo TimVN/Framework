@@ -71,7 +71,7 @@ export default class Model {
             if (Object.keys(relations).length > 0 && includeRelations) {
                 await Aigle.map(relations, async relation => {
                     await Aigle.map(data, async entry => {
-                        if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne) {
+                        if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne && entry[relation.left]) {
                             entry[relation.table] = await db.r.table(relation.table).get(entry[relation.left]);
                         } else {
                             entry[relation.table] = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(entry[relation.left]));
@@ -95,7 +95,7 @@ export default class Model {
 
             if (Object.keys(relations).length > 0 && includeRelations) {
                 await Aigle.map(relations, async relation => {
-                    if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne) {
+                    if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne && data[relation.left]) {
                         data[relation.table] = await db.r.table(relation.table).get(data[relation.left]);
                     } else {
                         data[relation.table] = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(data[relation.left]));
@@ -131,6 +131,15 @@ export default class Model {
             }
 
             resolve(this[this.PrimaryKey]);
+        })
+    }
+
+    // Deletes the entry this model refers to from the database
+    delete() {
+        return new Promise(async (resolve, reject) => {
+            let data = await db.r.table(this.Table).get(this[this.PrimaryKey]).delete();
+
+            resolve(data.deleted);
         })
     }
 }

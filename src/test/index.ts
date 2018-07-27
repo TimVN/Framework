@@ -2,18 +2,19 @@
 
 */
 
-import {framework} from "../index";
+import {Framework} from "../index";
 import {RelationTypes} from "../database/repository";
 
 import {User} from "./models/user";
 import {Bet} from "./models/bet";
+import {Game} from "./models/game";
 
-framework.bootstrap({
+Framework.bootstrap({
     db: 'framework'
 }).then(async done => {
     console.log(`Bootstrap complete`);
     // Now we can mount the routes etc. since the base framework is initialised
-    console.log(`List`, await framework.DB.tableList());
+    console.log(`List`, await Framework.DB.tableList());
 
 /*    let user = new User({
         name: 'Tim',
@@ -25,18 +26,22 @@ framework.bootstrap({
 
     let bet = new Bet();
     bet.join('user', 'user_id', 'id', RelationTypes.ManyToOne);
+    bet.join('game', 'game_id', 'id', RelationTypes.ManyToOne);
 
     let bets = await bet.all();
 
-    bets.forEach(b => {
-        console.log(b.json());
+    bets.forEach(async b => {
+        let u = new User(b.json().user);
+        u.name = 'Something';
+        await u.save();
+        //console.log(u);
     });
 
     let b = await new Bet().get('a7555e6b-3160-4c20-989b-a2806bdeaf84');
 
     b.amount = Math.random() * 100;
 
-    console.log(`Bet`, b.json());
+    console.log(b.json());
 
     await b.save();
 

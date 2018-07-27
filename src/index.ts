@@ -6,7 +6,7 @@ import {Database} from "./database";
 
 let DB;
 
-class Framework {
+class framework {
     bootstrap(DBOptions: any) : Promise<any> {
         return new Promise(async (resolve, reject) => {
             DB = new Database();
@@ -25,4 +25,4 @@ class Framework {
 // Exporting like this makes it so you dont have to instantiate the framework where you load it
 // Why? Cause (afaik) the framework will only be loaded once per project
 // Its not like a model
-export let framework = new Framework();
+export let Framework = new framework();
