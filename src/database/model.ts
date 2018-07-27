@@ -45,14 +45,16 @@ export default class Model {
     json(includeRelations = true) {
         let _tmp = {};
 
-        Object.keys(this.Properties).forEach(p => { _tmp[p] = this[p] ? this[p] : this.Properties[p] });
+        Object.keys(this.Properties).forEach(p => {
+            _tmp[p] = this[p] ? this[p] : this.Properties[p];
+        });
 
         if (includeRelations) {
             let relations = repository.getRelations(this.Table);
 
             // I will explain why I use Aigle more down
             Aigle.map(relations, relation => {
-                _tmp[relation.table] = this[relation.table];
+                _tmp[relation.table] = typeof this[relation.table].json==="function" ? this[relation.table].json() : this[relation.table];
             });
         }
 
@@ -72,9 +74,11 @@ export default class Model {
                 await Aigle.map(relations, async relation => {
                     await Aigle.map(data, async entry => {
                         if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne && entry[relation.left]) {
-                            entry[relation.table] = await db.r.table(relation.table).get(entry[relation.left]);
+                            let subdata = await db.r.table(relation.table).get(entry[relation.left]);
+                            entry[relation.table] = relation.model ? new relation.model(subdata) : subdata;
                         } else {
-                            entry[relation.table] = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(entry[relation.left]));
+                            let subdata = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(entry[relation.left]));
+                            entry[relation.table] = relation.model ? subdata.map(d => { return new relation.model(d) }) : subdata;
                         }
                     })
                 })
@@ -95,10 +99,18 @@ export default class Model {
 
             if (Object.keys(relations).length > 0 && includeRelations) {
                 await Aigle.map(relations, async relation => {
-                    if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne && data[relation.left]) {
+/*                    if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne && data[relation.left]) {
                         data[relation.table] = await db.r.table(relation.table).get(data[relation.left]);
                     } else {
                         data[relation.table] = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(data[relation.left]));
+                    }*/
+
+                    if (relation.type===RelationTypes.ManyToOne || relation.type===RelationTypes.OneToOne && data[relation.left]) {
+                        let subdata = await db.r.table(relation.table).get(data[relation.left]);
+                        data[relation.table] = relation.model ? new relation.model(subdata) : subdata;
+                    } else {
+                        let subdata = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(data[relation.left]));
+                        data[relation.table] = relation.model ? subdata.map(d => { return new relation.model(d) }) : subdata;
                     }
                 })
             }
@@ -110,9 +122,9 @@ export default class Model {
     // You can either use the repository.join directly or use this one
     // The only advantage of using this one is that it passes its own table for you
     // So it takes 1 less argument. It's whatever
-    // It registeres a relation in the repository. Read in repository why I made it a seperate module
-    join(right: string, leftKey: string, rightKey: string, type: number) : any {
-        repository.join(this.Table, right, leftKey, rightKey, type);
+    // It registers a relation in the repository. Read in repository why I made it a seperate module
+    join(right: string, leftKey: string, rightKey: string, type: number, model: any = null) : any {
+        repository.join(this.Table, right, leftKey, rightKey, type, model);
     }
 
     // Saves the model, returns a promise that resolves with the (new) value of the prim. key

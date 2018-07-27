@@ -16,13 +16,14 @@ export class Repository {
     // This stores the relation obviously
     // I give it a key that is basically just the arguments as a concatenated string
     // Cause you could possibly have more than 1 relation, I figured why not
-    join(left: string, right: string, leftKey: string, rightKey: string, type: number) : void {
+    join(left: string, right: string, leftKey: string, rightKey: string, type: number, model: any) : void {
         Relations[left] = Relations[left] || {};
         Relations[left][`${left}${right}${leftKey}${rightKey}`] = {
             table: right,
             left: leftKey,
             right: rightKey,
-            type: type
+            type: type,
+            model: model
         };
     }
 

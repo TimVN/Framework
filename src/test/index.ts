@@ -25,23 +25,23 @@ Framework.bootstrap({
     console.log(await user.save(), user.json());*/
 
     let bet = new Bet();
-    bet.join('user', 'user_id', 'id', RelationTypes.ManyToOne);
-    bet.join('game', 'game_id', 'id', RelationTypes.ManyToOne);
+    bet.join('user', 'user_id', 'id', RelationTypes.ManyToOne, User);
+    bet.join('game', 'game_id', 'id', RelationTypes.ManyToOne, Game);
 
     let bets = await bet.all();
 
     bets.forEach(async b => {
-        let u = new User(b.json().user);
-        u.name = 'Something';
-        await u.save();
-        //console.log(u);
+        //let u = new User(b.json().user);
+        //u.name = 'Something';
+        //await u.save();
+        console.log(b.game);
     });
 
     let b = await new Bet().get('a7555e6b-3160-4c20-989b-a2806bdeaf84');
 
     b.amount = Math.random() * 100;
 
-    console.log(b.json());
+    //console.log(b.json());
 
     await b.save();
 
