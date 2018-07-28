@@ -1,0 +1,25 @@
+{
+  "name": "framework",
+  "version": "1.0.0",
+  "description": "Dope af framework",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TimVN/Framework.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/TimVN/Framework/issues"
+  },
+  "homepage": "https://github.com/TimVN/Framework#readme",
+  "dependencies": {
+    "@types/node": "^10.5.4",
+    "@types/rethinkdb": "git+https://github.com/types/rethinkdb.git",
+    "aigle": "^1.12.0",
+    "rethinkdbdash": "^2.3.31"
+  }
+}
