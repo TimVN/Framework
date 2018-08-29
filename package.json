@@ -19,6 +19,7 @@
   "dependencies": {
     "@types/node": "^10.5.4",
     "@types/rethinkdb": "git+https://github.com/types/rethinkdb.git",
+    "@types/rethinkdbdash": "git+https://github.com/types/rethinkdbdash.git",
     "aigle": "^1.12.0",
     "rethinkdbdash": "^2.3.31"
   }

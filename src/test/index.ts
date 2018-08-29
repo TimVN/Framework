@@ -4,14 +4,18 @@
 
 import {Framework} from "../index";
 import {RelationTypes} from "../database/repository";
+import {Repository} from "../database/repository";
 
 import {User} from "./models/user";
 import {Bet} from "./models/bet";
 import {Game} from "./models/game";
+import {Country} from "./models/country";
+
+const repository = new Repository();
 
 Framework.bootstrap({
     db: 'framework'
-}).then(async done => {
+}).then(async () => {
     console.log(`Bootstrap complete`);
     // Now we can mount the routes etc. since the base framework is initialised
     console.log(`List`, await Framework.DB.tableList());
@@ -24,6 +28,8 @@ Framework.bootstrap({
 
     console.log(await user.save(), user.json());*/
 
+    repository.join('user', 'country', 'country_id', 'id', RelationTypes.ManyToOne, Country);
+
     let bet = new Bet();
     bet.join('user', 'user_id', 'id', RelationTypes.ManyToOne, User);
     bet.join('game', 'game_id', 'id', RelationTypes.ManyToOne, Game);
@@ -34,16 +40,16 @@ Framework.bootstrap({
         //let u = new User(b.json().user);
         //u.name = 'Something';
         //await u.save();
-        console.log(b.game);
+        //console.log(b.json());
     });
 
-    let b = await new Bet().get('a7555e6b-3160-4c20-989b-a2806bdeaf84');
+    let b = await new Bet().get('3504cd9e-2bbd-4f34-be91-709ef668b984');
 
-    b.amount = Math.random() * 100;
+    console.log(b.json());
 
     //console.log(b.json());
 
-    await b.save();
+    //await b.save();
 
 /*    await new User({
         name: 'Tim',

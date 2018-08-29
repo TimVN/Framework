@@ -5,7 +5,8 @@ interface bet {
     user_id: string,
     game_id: string,
     amount: number,
-    date: Date
+    date: Date,
+    game: any
 }
 
 export class Bet extends Model {
@@ -17,7 +18,8 @@ export class Bet extends Model {
         user_id: '',
         game_id: '',
         amount: 0,
-        date: new Date()
+        date: new Date(),
+        game: null
     };
 
     public id : string;
@@ -25,6 +27,7 @@ export class Bet extends Model {
     public game_id : string;
     public amount : number;
     public date : Date;
+    public game: any;
 
     constructor(data:bet = null) {
         super(data);

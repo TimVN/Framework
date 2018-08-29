@@ -9,7 +9,8 @@ interface user {
     id?: string,
     name: string,
     password: string,
-    balance: number
+    balance: number,
+    country_id: string
 }
 
 export class User extends Model {
@@ -20,7 +21,8 @@ export class User extends Model {
         id: '',
         name: '',
         password: '',
-        balance: 0
+        balance: 0,
+        country_id: ''
     };
 
     public id : string;
