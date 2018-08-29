@@ -133,6 +133,35 @@ export default class Model {
         });
     }
 
+    find(index: number = 1, includeRelations = true) : any {
+        return new Promise(async (resolve, reject) => {
+            let data = await db.r.table(this.Table).limit(index);
+
+            let relations = repository.getRelations(this.Table);
+
+            if (Object.keys(relations).length > 0 && includeRelations && data.length > 0) {
+                data = data[0];
+                await Aigle.map(relations, async relation => {
+                    // Check all() to read about the logic that's happening here
+                    if (data[relation.left]) {
+                        if (relation.type === RelationTypes.ManyToOne || relation.type === RelationTypes.OneToOne && data[relation.left]) {
+                            data[relation.table] = await new relation.model().get(data[relation.left]);
+                            //let subdata = await db.r.table(relation.table).get(data[relation.left]);
+                            //data[relation.table] = relation.model && subdata ? new relation.model(subdata) : subdata;
+                        } else {
+                            let subdata = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(data[relation.left]));
+                            data[relation.table] = relation.model ? subdata.map(d => {
+                                return new relation.model(d)
+                            }) : subdata;
+                        }
+                    }
+                })
+            }
+
+            resolve(data ? new this.child(data) : new this.child());
+        });
+    }
+
     // You can either use the repository.join directly or use this one
     // The only advantage of using this one is that it passes its own table for you
     // So it takes 1 less argument. It's whatever

@@ -45,7 +45,13 @@ Framework.bootstrap({
 
     let b = await new Bet().get('3504cd9e-2bbd-4f34-be91-709ef668b984');
 
-    console.log(b.json());
+    //console.log(b.json());
+
+    let users = await new User().all();
+    users.forEach(async u => {
+        u.country_id = 'b26921f9-5035-44ea-8745-31af56b87ae5';
+        await u.save();
+    });
 
     //console.log(b.json());
 
@@ -66,7 +72,8 @@ Framework.bootstrap({
 
     console.log(`User`, user.json());*/
 
-    let loadUser = await new User().get('61eca28e-7445-4390-be81-b44012a58852');
+    let loadUser = await new User().find(1);
+    console.log(loadUser.json());
 
     //console.log(`Loaded model with .get()`, loadUser.json());
 
