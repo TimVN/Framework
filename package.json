@@ -1,5 +1,5 @@
 {
-  "name": "framework",
+  "name": "rethinkdb-framework",
   "version": "1.0.0",
   "description": "Dope af framework",
   "main": "index.js",

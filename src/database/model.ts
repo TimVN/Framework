@@ -41,11 +41,13 @@ export default class Model {
     // By default, it will return any relations it may have and their values
     // The reason it can be disabled, is because the save() function calles .json() as well
     // And because you don't want to store joined data in one table, you can opt out so it won't return them
-    json(includeRelations = true) {
+    json(includeRelations = true, exclude: any = []) {
         let _tmp = {};
 
         Object.keys(this.Properties).forEach(p => {
-            _tmp[p] = this[p] ? this[p] : this.Properties[p];
+            if (!exclude.includes(p)) {
+                _tmp[p] = this[p] ? this[p] : this.Properties[p];
+            }
         });
 
         if (includeRelations) {
