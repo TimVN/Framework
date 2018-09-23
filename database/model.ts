@@ -181,8 +181,15 @@ export default class Model {
                         // Very dope
                         if (entry[relation.left]) {
                             if (relation.type === RelationTypes.ManyToOne || relation.type === RelationTypes.OneToOne) {
-                                let subdata = await db.r.table(relation.table).get(entry[relation.left]);
-                                entry[relation.table] = relation.model ? new relation.model(subdata) : subdata;
+                                if (relation.cacheResults && repository.Memory.hasOwnProperty(entry[relation.left])) {
+                                    entry[relation.table] = relation.model ? new relation.model(repository.Memory[entry[relation.left]]) : repository.Memory[entry[relation.left]];
+                                } else {
+                                    let subdata = await db.r.table(relation.table).get(entry[relation.left]);
+                                    entry[relation.table] = relation.model ? new relation.model(subdata) : subdata;
+                                    if (relation.cacheResults) {
+                                        repository.cache(entry[relation.left], subdata);
+                                    }
+                                }
                             } else {
                                 let subdata = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(entry[relation.left]));
                                 entry[relation.table] = relation.model ? subdata.map(d => {

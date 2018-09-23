@@ -4,6 +4,7 @@ Why though? Cause it doesn't forget. Set the join in 1 place, and all other plac
 this module will have access to those same relations
 */
 const Relations = {};
+const Cache = {};
 
 interface relation {
     table: string,
@@ -16,14 +17,15 @@ export class Repository {
     // This stores the relation obviously
     // I give it a key that is basically just the arguments as a concatenated string
     // Cause you could possibly have more than 1 relation, I figured why not
-    join(left: string, right: string, leftKey: string, rightKey: string, type: number, model: any) : void {
+    join(left: string, right: string, leftKey: string, rightKey: string, type: number, model: any, cacheResults: boolean = false) : void {
         Relations[left] = Relations[left] || {};
         Relations[left][`${left}${right}${leftKey}${rightKey}`] = {
             table: right,
             left: leftKey,
             right: rightKey,
             type: type,
-            model: model
+            model: model,
+            cacheResults: cacheResults,
         };
     }
 
@@ -35,6 +37,14 @@ export class Repository {
 
     getRelations(left: string): relation {
         return Relations[left] || {};
+    }
+
+    cache(id: string, data: any) {
+        Cache[id] = data;
+    }
+
+    get Memory() {
+        return Cache;
     }
 
     get relations() {
