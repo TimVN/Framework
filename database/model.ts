@@ -36,6 +36,10 @@ export default class Model {
         }
     }
 
+    get r() {
+        return db.r;
+    }
+
     // This does what you think it does, there is one big difference though
     // By default, it will return any relations it may have and their values
     // The reason it can be disabled, is because the save() function calls .json() as well
