@@ -1,6 +1,7 @@
 /* model.ts - The base model for every model that contains the underlying logic
 I have decided to not be a faggot and comment what I'm doing here
 So you'll be able to understand faster/more easily
+fucking goed framework
 */
 import {Database} from "./";
 import {Repository, RelationTypes} from "./repository";
