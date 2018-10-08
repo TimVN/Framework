@@ -37,6 +37,7 @@ export default class Model {
         }
     }
 
+    // Exposes the "raw" RethinkDB instance
     get r() {
         return db.r;
     }
@@ -82,31 +83,6 @@ export default class Model {
             if (includeRelations) {
                 data = await this.resolveRelations(data);
             }
-/*            let relations = repository.getRelations(this.Table);
-
-            if (Object.keys(relations).length > 0 && includeRelations && data) {
-                await Aigle.map(relations, async relation => {
-                    await Aigle.map(data, async entry => {
-                        // In case you want to know/read what it's doing here
-                        // Aigle is async, so you can await and the rest ouside of the loop will wait
-                        // I check the relation. If it's x to one, it's way faster to do a get instead of a filter
-                        // After this, it will check if there was a constructor (model) passed when .join was called
-                        // If there was, it will return instances of that model given the data it loaded from the db
-                        // Very dope
-                        if (entry[relation.left]) {
-                            if (relation.type === RelationTypes.ManyToOne || relation.type === RelationTypes.OneToOne) {
-                                let subdata = await db.r.table(relation.table).get(entry[relation.left]);
-                                entry[relation.table] = relation.model ? new relation.model(subdata) : subdata;
-                            } else {
-                                let subdata = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(entry[relation.left]));
-                                entry[relation.table] = relation.model ? subdata.map(d => {
-                                    return new relation.model(d)
-                                }) : subdata;
-                            }
-                        }
-                    })
-                })
-            }*/
 
             resolve(data.map(values => {
                 return new this.child(values);
@@ -122,25 +98,6 @@ export default class Model {
             if (includeRelations) {
                 data = await this.resolveRelations([data]);
             }
-/*            let relations = repository.getRelations(this.Table);
-
-            if (Object.keys(relations).length > 0 && includeRelations && data) {
-                await Aigle.map(relations, async relation => {
-                    // Check all() to read about the logic that's happening here
-                    if (data[relation.left]) {
-                        if (relation.type === RelationTypes.ManyToOne || relation.type === RelationTypes.OneToOne && data[relation.left]) {
-                            data[relation.table] = await new relation.model().get(data[relation.left]);
-                            //let subdata = await db.r.table(relation.table).get(data[relation.left]);
-                            //data[relation.table] = relation.model && subdata ? new relation.model(subdata) : subdata;
-                        } else {
-                            let subdata = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(data[relation.left]));
-                            data[relation.table] = relation.model ? subdata.map(d => {
-                                return new relation.model(d)
-                            }) : subdata;
-                        }
-                    }
-                })
-            }*/
 
             resolve(data.length > 0 ? new this.child(data[0]) : new this.child());
         });
@@ -154,26 +111,6 @@ export default class Model {
                 data = await this.resolveRelations(data);
                 data = data.length > 0 ? data[0] : data;
             }
-/*            let relations = repository.getRelations(this.Table);
-
-            if (Object.keys(relations).length > 0 && includeRelations && data.length > 0) {
-                data = data[0];
-                await Aigle.map(relations, async relation => {
-                    // Check all() to read about the logic that's happening here
-                    if (data[relation.left]) {
-                        if (relation.type === RelationTypes.ManyToOne || relation.type === RelationTypes.OneToOne && data[relation.left]) {
-                            data[relation.table] = await new relation.model().get(data[relation.left]);
-                            //let subdata = await db.r.table(relation.table).get(data[relation.left]);
-                            //data[relation.table] = relation.model && subdata ? new relation.model(subdata) : subdata;
-                        } else {
-                            let subdata = await db.r.table(relation.table).filter(db.r.row(relation.right).eq(data[relation.left]));
-                            data[relation.table] = relation.model ? subdata.map(d => {
-                                return new relation.model(d)
-                            }) : subdata;
-                        }
-                    }
-                })
-            }*/
 
             resolve(data ? new this.child(data) : new this.child());
         });
