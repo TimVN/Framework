@@ -7,7 +7,7 @@ import {Database} from "./database";
 let DB;
 
 class framework {
-    bootstrap(DBOptions: any) : Promise<any> {
+    bootstrap(DBOptions: any = {}) : Promise<any> {
         return new Promise(async (resolve, reject) => {
             DB = new Database();
 

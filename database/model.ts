@@ -64,6 +64,9 @@ export default class Model {
             // If yes, we can run .json() on the nested model. Recursion handles the rest
             Aigle.map(relations, relation => {
                 const rel = relation.identifier;
+                if (this.Table==='country') {
+                    console.log(`rel ${rel}`, this);
+                }
                 if (this[rel] && !exclude.includes(rel)) {
                     _tmp[rel] = typeof this[rel].json === "function" ? this[rel].json(includeRelations, exclude) : this[rel];
                 }
@@ -149,7 +152,7 @@ export default class Model {
     }
 
     // Saves the model, returns a promise that resolves with the (new) value of the prim. key
-    save() {
+    save() : Promise<any> {
         return new Promise(async (resolve, reject) => {
             let modelData = this.json(false);
             if (!modelData[this.PrimaryKey]) {
@@ -162,8 +165,9 @@ export default class Model {
                 }
                 this[this.PrimaryKey] = data.generated_keys[0];
             }
+            const newData = await this.resolveRelations([this.json(false)]);
 
-            resolve(this[this.PrimaryKey]);
+            resolve(new this.child(newData[0]));
         })
     }
 
