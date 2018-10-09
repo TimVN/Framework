@@ -17,6 +17,7 @@ export default class Model {
     public DBProperties;
     public Properties;
 
+    private _Query;
     private child;
     public data;
 
@@ -37,9 +38,38 @@ export default class Model {
         }
     }
 
+    get Query() {
+        return this._Query || this.r.table(this.Table);
+    }
+
+    set Query(q) {
+        this._Query = q;
+    }
+
     // Exposes the "raw" RethinkDB instance
     get r() {
         return db.r;
+    }
+
+    run(includeRelations: boolean = true): Promise<any> {
+        return new Promise(async (resolve, reject) => {
+            let results = await this.Query.run();
+            results = Array.isArray(results) ? results : [results];
+
+            if (includeRelations) {
+                results = await this.resolveRelations(results);
+            }
+
+            if (results.length > 1) {
+                resolve(
+                    results.map(res => {
+                        return new this.child(res);
+                    })
+                );
+            } else {
+                resolve(new this.child(results[0]));
+            }
+        });
     }
 
     // This does what you think it does, there is one big difference though
@@ -64,9 +94,6 @@ export default class Model {
             // If yes, we can run .json() on the nested model. Recursion handles the rest
             Aigle.map(relations, relation => {
                 const rel = relation.identifier;
-                if (this.Table==='country') {
-                    console.log(`rel ${rel}`, this);
-                }
                 if (this[rel] && !exclude.includes(rel)) {
                     _tmp[rel] = typeof this[rel].json === "function" ? this[rel].json(includeRelations, exclude) : this[rel];
                 }
@@ -80,30 +107,29 @@ export default class Model {
     // Also (tries) to load relations
     // Skipping relations is optional, for when you don't really need the related data
     all(includeRelations: boolean = true) : any {
-        return new Promise(async (resolve, reject) => {
-            let data = await db.r.table(this.Table);
-
-            if (includeRelations) {
-                data = await this.resolveRelations(data);
-            }
-
-            resolve(data.map(values => {
-                return new this.child(values);
-            }));
-        });
+        this.Query = db.r.table(this.Table);
+        return this;
     }
 
     // Same as .all() except for 1 entry
     get(id: string, includeRelations: boolean = true) : any {
-        return new Promise(async (resolve, reject) => {
-            let data = await db.r.table(this.Table).get(id);
+        this.Query = db.r.table(this.Table).get(id);
+        return this;
+    }
 
-            if (includeRelations) {
-                data = await this.resolveRelations([data]);
-            }
+    filter(filter: any = {}) {
+        this.Query = this.r.table(this.Table).filter(filter);
+        return this;
+    }
 
-            resolve(data.length > 0 ? new this.child(data[0]) : new this.child());
-        });
+    skip(to: number) {
+        this.Query = this.Query.skip(to);
+        return this;
+    }
+
+    limit(to: number) {
+        this.Query = this.Query.limit(to);
+        return this;
     }
 
     find(index: number = 1, includeRelations = true) : any {
@@ -117,6 +143,19 @@ export default class Model {
 
             resolve(data ? new this.child(data) : new this.child());
         });
+    }
+
+    getAll(value: number | string, index: string) {
+        this.Query = this.Query.getAll(value, { index: index });
+        return this;
+    }
+
+    range(start: number, finish: number) {
+        if (finish - start < 1) {
+            throw new Error(`Finish of range must be greater than start on ${this.Table}`);
+        }
+        this.Query = this.Query.skip(start).limit(finish - start);
+        return this;
     }
 
     findByIndex(value: any, index: any, filter: any = null): any {
@@ -173,11 +212,7 @@ export default class Model {
 
     // Deletes the entry this model refers to from the database
     delete() {
-        return new Promise(async (resolve, reject) => {
-            let data = await db.r.table(this.Table).get(this[this.PrimaryKey]).delete();
-
-            resolve(data.deleted);
-        })
+        this.Query = this.Query.delete();
     }
 
     cache() {
