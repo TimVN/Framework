@@ -51,16 +51,16 @@ export default class Model {
         return db.r;
     }
 
-    run(includeRelations: boolean = true): Promise<any> {
+    run(options = { includeRelations: true, forceArray: false }): Promise<any> {
         return new Promise(async (resolve, reject) => {
             let results = await this.Query.run();
             results = Array.isArray(results) ? results : [results];
 
-            if (includeRelations) {
+            if (options.includeRelations) {
                 results = await this.resolveRelations(results);
             }
 
-            if (results.length > 1) {
+            if (results.length > 1 || options.forceArray) {
                 resolve(
                     results.map(res => {
                         return new this.child(res);
@@ -159,27 +159,13 @@ export default class Model {
     }
 
     findByIndex(value: any, index: any, filter: any = null): any {
-        return new Promise(async (resolve, reject) => {
-            let query = db.r.table(this.Table).getAll(value, {index: index});
-            if (filter) {
-                query = query.filter(filter);
-            }
-            let data = await query.run();
-                data = await this.resolveRelations(data);
-            resolve(data.map(e => { return new this.child(e) }));
-        });
+        this.Query = this.Query.getAll(value, { index: index });
+        return this;
     }
 
     findOneByIndex(value: any, index: any, filter: any = null): any {
-        return new Promise(async (resolve, reject) => {
-            let query = db.r.table(this.Table).getAll(value, {index: index}).limit(1);
-            if (filter) {
-                query = query.filter(filter);
-            }
-            let data = await query.run();
-            data = await this.resolveRelations(data);
-            resolve(data.length > 0 ? new this.child(data[0]) : false);
-        });
+        this.Query = this.Query.getAll(value, { index: index }).limit(1);
+        return this;
     }
 
     // You can either use the repository.join directly or use this one
