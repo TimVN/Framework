@@ -51,16 +51,16 @@ export default class Model {
         return db.r;
     }
 
-    run(options = { includeRelations: true, forceArray: false }): Promise<any> {
+    run({ includeRelations = true, forceArray = false }): Promise<any> {
         return new Promise(async (resolve, reject) => {
             let results = await this.Query.run();
             results = Array.isArray(results) ? results : [results];
 
-            if (options.includeRelations) {
+            if (includeRelations) {
                 results = await this.resolveRelations(results);
             }
 
-            if (results.length > 1 || options.forceArray) {
+            if (results.length > 1 || forceArray) {
                 resolve(
                     results.map(res => {
                         return new this.child(res);
@@ -76,7 +76,7 @@ export default class Model {
     // By default, it will return any relations it may have and their values
     // The reason it can be disabled, is because the save() function calls .json() as well
     // And because you don't want to store joined data in one table, you can opt out so it won't return them
-    json(includeRelations = true, exclude: any = []) {
+    json({ includeRelations = true, exclude = [] } = {}) {
         let _tmp = {};
 
         Object.keys(this.Properties).forEach(p => {
@@ -95,7 +95,16 @@ export default class Model {
             Aigle.map(relations, relation => {
                 const rel = relation.identifier;
                 if (this[rel] && !exclude.includes(rel)) {
-                    _tmp[rel] = typeof this[rel].json === "function" ? this[rel].json(includeRelations, exclude) : this[rel];
+                    if (Array.isArray(this[rel])) {
+                        _tmp[rel] = this[rel].map(i => {
+                            return i.json({ includeRelations, exclude });
+                        });
+                    } else {
+                        _tmp[rel] = typeof this[rel].json === "function" ? this[rel].json({
+                            includeRelations,
+                            exclude
+                        }) : this[rel];
+                    }
                 }
             });
         }
@@ -106,13 +115,13 @@ export default class Model {
     // This simply gets all the entries in the table
     // Also (tries) to load relations
     // Skipping relations is optional, for when you don't really need the related data
-    all(includeRelations: boolean = true) : any {
+    all() : any {
         this.Query = db.r.table(this.Table);
         return this;
     }
 
     // Same as .all() except for 1 entry
-    get(id: string, includeRelations: boolean = true) : any {
+    get(id: string) : any {
         this.Query = db.r.table(this.Table).get(id);
         return this;
     }
@@ -168,6 +177,15 @@ export default class Model {
         return this;
     }
 
+    orderBy({ order = 'asc', prop = '' }) {
+        if (order==='asc') {
+            this.Query = this.Query.orderBy({ index: this.r.asc(prop) });
+        } else {
+            this.Query = this.Query.orderBy({ index: this.r.desc(prop) });
+        }
+        return this;
+    }
+
     // You can either use the repository.join directly or use this one
     // The only advantage of using this one is that it passes its own table for you
     // So it takes 1 less argument. It's whatever
@@ -179,7 +197,7 @@ export default class Model {
     // Saves the model, returns a promise that resolves with the (new) value of the prim. key
     save() : Promise<any> {
         return new Promise(async (resolve, reject) => {
-            let modelData = this.json(false);
+            let modelData = this.json({ includeRelations: false });
             if (!modelData[this.PrimaryKey]) {
                 delete modelData[this.PrimaryKey];
             }
@@ -190,7 +208,7 @@ export default class Model {
                 }
                 this[this.PrimaryKey] = data.generated_keys[0];
             }
-            const newData = await this.resolveRelations([this.json(false)]);
+            const newData = await this.resolveRelations([this.json({ includeRelations: false })]);
 
             resolve(new this.child(newData[0]));
         })
