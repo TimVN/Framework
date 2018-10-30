@@ -51,7 +51,7 @@ export default class Model {
         return db.r;
     }
 
-    run({ includeRelations = true, forceArray = false }): Promise<any> {
+    run({ includeRelations = true, forceArray = false } = {}): Promise<any> {
         return new Promise(async (resolve, reject) => {
             let results = await this.Query.run();
             results = Array.isArray(results) ? results : [results];
@@ -127,7 +127,14 @@ export default class Model {
     }
 
     filter(filter: any = {}) {
-        this.Query = this.r.table(this.Table).filter(filter);
+        this.Query = this.Query.filter(filter);
+        return this;
+    }
+
+    match(prop: string, value: any) {
+        this.Query = this.Query.filter(function(doc) {
+            return doc(prop).match(value)
+        });
         return this;
     }
 
@@ -157,6 +164,10 @@ export default class Model {
     getAll(value: number | string, index: string) {
         this.Query = this.Query.getAll(value, { index: index });
         return this;
+    }
+
+    count() {
+        return this.Query.count().run();
     }
 
     range(start: number, finish: number) {
@@ -217,6 +228,7 @@ export default class Model {
     // Deletes the entry this model refers to from the database
     delete() {
         this.Query = this.Query.delete();
+        return this;
     }
 
     cache() {
@@ -238,7 +250,7 @@ export default class Model {
                     // After this, it will check if there was a constructor (model) passed when .join was called
                     // If there was, it will return instances of that model given the data it loaded from the db
                     // Very dope
-                    if (entry[relation.left]) {
+                    if (entry!==null && entry[relation.left]) {
                         if (relation.type === RelationTypes.ManyToOne || relation.type === RelationTypes.OneToOne) {
                             if (relation.cacheResults && repository.Memory.hasOwnProperty(entry[relation.left])) {
                                 entry[relation.table] = relation.model ? new relation.model(repository.Memory[entry[relation.left]]) : repository.Memory[`${this.Table}_${entry[relation.left]}`];
