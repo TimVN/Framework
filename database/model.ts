@@ -112,6 +112,12 @@ export default class Model {
         return _tmp;
     }
 
+    hook(hookName: string, data: any) {
+        if (typeof this[hookName] === 'function') {
+            this[hookName](data);
+        }
+    }
+
     // This simply gets all the entries in the table
     // Also (tries) to load relations
     // Skipping relations is optional, for when you don't really need the related data
@@ -207,6 +213,8 @@ export default class Model {
 
     // Saves the model, returns a promise that resolves with the (new) value of the prim. key
     save() : Promise<any> {
+        let newRecord = false;
+        this.hook('beforeSave', { newRecord: newRecord });
         return new Promise(async (resolve, reject) => {
             let modelData = this.json({ includeRelations: false });
             if (!modelData[this.PrimaryKey]) {
@@ -214,6 +222,7 @@ export default class Model {
             }
             let data = await db.r.table(this.Table).insert(modelData, { conflict: 'update', returnChanges: true });
             if (data.generated_keys && data.generated_keys.length > 0) {
+                newRecord = true;
                 if (!this.DBProperties.includes(this.PrimaryKey)) {
                     this.DBProperties.push(this.PrimaryKey);
                 }
@@ -221,6 +230,7 @@ export default class Model {
             }
             const newData = await this.resolveRelations([this.json({ includeRelations: false })]);
 
+            this.hook('afterSave', { newRecord: newRecord });
             resolve(new this.child(newData[0]));
         })
     }
