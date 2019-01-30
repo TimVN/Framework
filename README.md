@@ -5,6 +5,12 @@ To run a test, make sure to create a 'user' and 'country' table in either your o
 
 All base functionality is written in database/model. Switch to the chainable branch for a more complete set of functionality. The only difference between the master and chainable is that the operations in the chainable branch are... chainable.
 
+Install dependencies:
+    
+    npm i
+    or
+    yarn install
+
 To run the test, edit test/index.ts (or don't) and run:
 
     tsc
