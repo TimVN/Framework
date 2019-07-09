@@ -17,6 +17,7 @@ export default class Model {
     public DBProperties;
     public Properties;
 
+    private _Query;
     private child;
     public data;
 
@@ -37,16 +38,45 @@ export default class Model {
         }
     }
 
+    get Query() {
+        return this._Query || this.r.table(this.Table);
+    }
+
+    set Query(q) {
+        this._Query = q;
+    }
+
     // Exposes the "raw" RethinkDB instance
     get r() {
         return db.r;
+    }
+
+    run({ includeRelations = true, forceArray = false } = {}): Promise<any> {
+        return new Promise(async (resolve, reject) => {
+            let results = await this.Query.run();
+            results = Array.isArray(results) ? results : [results];
+
+            if (includeRelations) {
+                results = await this.resolveRelations(results);
+            }
+
+            if (results.length > 1 || forceArray) {
+                resolve(
+                    results.map(res => {
+                        return new this.child(res);
+                    })
+                );
+            } else {
+                resolve(new this.child(results[0]));
+            }
+        });
     }
 
     // This does what you think it does, there is one big difference though
     // By default, it will return any relations it may have and their values
     // The reason it can be disabled, is because the save() function calls .json() as well
     // And because you don't want to store joined data in one table, you can opt out so it won't return them
-    json(includeRelations = true, exclude: any = []) {
+    json({ includeRelations = true, exclude = [] } = {}) {
         let _tmp = {};
 
         Object.keys(this.Properties).forEach(p => {
@@ -64,11 +94,17 @@ export default class Model {
             // If yes, we can run .json() on the nested model. Recursion handles the rest
             Aigle.map(relations, relation => {
                 const rel = relation.identifier;
-                if (this.Table==='country') {
-                    console.log(`rel ${rel}`, this);
-                }
                 if (this[rel] && !exclude.includes(rel)) {
-                    _tmp[rel] = typeof this[rel].json === "function" ? this[rel].json(includeRelations, exclude) : this[rel];
+                    if (Array.isArray(this[rel])) {
+                        _tmp[rel] = this[rel].map(i => {
+                            return i.json({ includeRelations, exclude });
+                        });
+                    } else {
+                        _tmp[rel] = typeof this[rel].json === "function" ? this[rel].json({
+                            includeRelations,
+                            exclude
+                        }) : this[rel];
+                    }
                 }
             });
         }
@@ -76,34 +112,46 @@ export default class Model {
         return _tmp;
     }
 
+    hook(hookName: string, data: any) {
+        if (typeof this[hookName] === 'function') {
+            this[hookName](data);
+        }
+    }
+
     // This simply gets all the entries in the table
     // Also (tries) to load relations
     // Skipping relations is optional, for when you don't really need the related data
-    all(includeRelations: boolean = true) : any {
-        return new Promise(async (resolve, reject) => {
-            let data = await db.r.table(this.Table);
-
-            if (includeRelations) {
-                data = await this.resolveRelations(data);
-            }
-
-            resolve(data.map(values => {
-                return new this.child(values);
-            }));
-        });
+    all() : any {
+        this.Query = db.r.table(this.Table);
+        return this;
     }
 
     // Same as .all() except for 1 entry
-    get(id: string, includeRelations: boolean = true) : any {
-        return new Promise(async (resolve, reject) => {
-            let data = await db.r.table(this.Table).get(id);
+    get(id: string) : any {
+        this.Query = db.r.table(this.Table).get(id);
+        return this;
+    }
 
-            if (includeRelations) {
-                data = await this.resolveRelations([data]);
-            }
+    filter(filter: any = {}) {
+        this.Query = this.Query.filter(filter);
+        return this;
+    }
 
-            resolve(data.length > 0 ? new this.child(data[0]) : new this.child());
+    match(prop: string, value: any) {
+        this.Query = this.Query.filter(function(doc) {
+            return doc(prop).match(value)
         });
+        return this;
+    }
+
+    skip(to: number) {
+        this.Query = this.Query.skip(to);
+        return this;
+    }
+
+    limit(to: number) {
+        this.Query = this.Query.limit(to);
+        return this;
     }
 
     find(index: number = 1, includeRelations = true) : any {
@@ -119,28 +167,40 @@ export default class Model {
         });
     }
 
+    getAll(value: number | string, index: string) {
+        this.Query = this.Query.getAll(value, { index: index });
+        return this;
+    }
+
+    count() {
+        return this.Query.count().run();
+    }
+
+    range(start: number, finish: number) {
+        if (finish - start < 1) {
+            throw new Error(`Finish of range must be greater than start on ${this.Table}`);
+        }
+        this.Query = this.Query.skip(start).limit(finish - start);
+        return this;
+    }
+
     findByIndex(value: any, index: any, filter: any = null): any {
-        return new Promise(async (resolve, reject) => {
-            let query = db.r.table(this.Table).getAll(value, {index: index});
-            if (filter) {
-                query = query.filter(filter);
-            }
-            let data = await query.run();
-                data = await this.resolveRelations(data);
-            resolve(data.map(e => { return new this.child(e) }));
-        });
+        this.Query = this.Query.getAll(value, { index: index });
+        return this;
     }
 
     findOneByIndex(value: any, index: any, filter: any = null): any {
-        return new Promise(async (resolve, reject) => {
-            let query = db.r.table(this.Table).getAll(value, {index: index}).limit(1);
-            if (filter) {
-                query = query.filter(filter);
-            }
-            let data = await query.run();
-            data = await this.resolveRelations(data);
-            resolve(data.length > 0 ? new this.child(data[0]) : false);
-        });
+        this.Query = this.Query.getAll(value, { index: index }).limit(1);
+        return this;
+    }
+
+    orderBy({ order = 'asc', prop = '' }) {
+        if (order==='asc') {
+            this.Query = this.Query.orderBy({ index: this.r.asc(prop) });
+        } else {
+            this.Query = this.Query.orderBy({ index: this.r.desc(prop) });
+        }
+        return this;
     }
 
     // You can either use the repository.join directly or use this one
@@ -153,31 +213,32 @@ export default class Model {
 
     // Saves the model, returns a promise that resolves with the (new) value of the prim. key
     save() : Promise<any> {
+        let newRecord = false;
+        this.hook('beforeSave', { newRecord: newRecord });
         return new Promise(async (resolve, reject) => {
-            let modelData = this.json(false);
+            let modelData = this.json({ includeRelations: false });
             if (!modelData[this.PrimaryKey]) {
                 delete modelData[this.PrimaryKey];
             }
             let data = await db.r.table(this.Table).insert(modelData, { conflict: 'update', returnChanges: true });
             if (data.generated_keys && data.generated_keys.length > 0) {
+                newRecord = true;
                 if (!this.DBProperties.includes(this.PrimaryKey)) {
                     this.DBProperties.push(this.PrimaryKey);
                 }
                 this[this.PrimaryKey] = data.generated_keys[0];
             }
-            const newData = await this.resolveRelations([this.json(false)]);
+            const newData = await this.resolveRelations([this.json({ includeRelations: false })]);
 
+            this.hook('afterSave', { newRecord: newRecord });
             resolve(new this.child(newData[0]));
         })
     }
 
     // Deletes the entry this model refers to from the database
     delete() {
-        return new Promise(async (resolve, reject) => {
-            let data = await db.r.table(this.Table).get(this[this.PrimaryKey]).delete();
-
-            resolve(data.deleted);
-        })
+        this.Query = this.Query.delete();
+        return this;
     }
 
     cache() {
@@ -199,7 +260,7 @@ export default class Model {
                     // After this, it will check if there was a constructor (model) passed when .join was called
                     // If there was, it will return instances of that model given the data it loaded from the db
                     // Very dope
-                    if (entry[relation.left]) {
+                    if (entry!==null && entry[relation.left]) {
                         if (relation.type === RelationTypes.ManyToOne || relation.type === RelationTypes.OneToOne) {
                             if (relation.cacheResults && repository.Memory.hasOwnProperty(entry[relation.left])) {
                                 entry[relation.table] = relation.model ? new relation.model(repository.Memory[entry[relation.left]]) : repository.Memory[`${this.Table}_${entry[relation.left]}`];
